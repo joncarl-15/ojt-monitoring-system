@@ -126,11 +126,6 @@ if (isset($conn)) {
             OJT Monitoring System
         </a>
 
-        <div class="navbar-actions">
-            <a href="#" class="btn btn-secondary" id="login-btn">Login</a>
-            <a href="#" class="btn" id="signup-btn">Sign Up</a>
-        </div>
-
         <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Open navigation">
             <span class="bar"></span>
             <span class="bar"></span>
@@ -138,11 +133,6 @@ if (isset($conn)) {
         </button>
 
         <div class="nav-links" id="primary-nav" role="navigation" aria-label="Primary">
-            <div class="nav-panel-header">
-                <h3>Menu</h3>
-                <button id="nav-close-btn" class="nav-close" aria-label="Close menu">&times;</button>
-            </div>
-
             <div class="nav-panel-login-wrapper">
                 <a href="#" class="btn btn-secondary nav-panel-login" id="panel-login">Login / Sign Up</a>
             </div>

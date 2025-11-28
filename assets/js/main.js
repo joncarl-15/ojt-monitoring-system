@@ -14,19 +14,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Close button inside nav panel
-    const navCloseBtn = document.getElementById('nav-close-btn');
     const navOverlay = document.getElementById('nav-overlay');
     function closeNavPanel() {
         if (navLinks) navLinks.classList.remove('active');
         if (mobileMenuBtn) mobileMenuBtn.classList.remove('active');
         if (navOverlay) navOverlay.classList.remove('active');
-    }
-
-    if (navCloseBtn) {
-        navCloseBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            closeNavPanel();
-        });
     }
 
     if (navOverlay) {
