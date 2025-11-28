@@ -42,8 +42,15 @@ $companies = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     <div class="main-content fade-in">
         <div class="card slide-up">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                <h2 style="color: var(--primary-dark); margin: 0;">All Companies</h2>
-                <!-- Placeholder for Add Company button if needed in future -->
+                <h2 style="color: var(--primary-dark); margin: 0;">All Companies</h2>                <a href="appoint_company.php" class="btn" style="padding: 0.75rem 1.5rem;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display: inline-block; vertical-align: middle; margin-right: 0.5rem;">
+                        <path d="M17 21V19C17 17.9391 16.5786 16.9217 15.8284 16.1716C15.0783 15.4214 14.0609 15 13 15H5C3.93913 15 2.92172 15.4214 2.17157 16.1716C1.42143 16.9217 1 17.9391 1 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M9 11C11.2091 11 13 9.20914 13 7C13 4.79086 11.2091 3 9 3C6.79086 3 5 4.79086 5 7C5 9.20914 6.79086 11 9 11Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M23 11L20 8M20 8L17 11M20 8V16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Appoint Company to Student
+                </a>
+
             </div>
 
             <?php if (empty($companies)): ?>

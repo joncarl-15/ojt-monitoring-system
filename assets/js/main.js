@@ -1,4 +1,15 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // Loading Screen - Show for 2 seconds
+    const loadingScreen = document.getElementById('loading-screen');
+    if (loadingScreen) {
+        setTimeout(() => {
+            loadingScreen.classList.add('fade-out');
+            setTimeout(() => {
+                loadingScreen.style.display = 'none';
+            }, 500); // Wait for fade animation
+        }, 2000); // 2 seconds
+    }
+
     // Mobile Menu Toggle
     const mobileMenuBtn = document.getElementById('mobile-menu-btn');
     const navLinks = document.querySelector('.nav-links');
@@ -28,6 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Modal Handling
     const loginBtn = document.getElementById('login-btn');
     const signupBtn = document.getElementById('signup-btn');
+    const panelLoginBtn = document.getElementById('panel-login');
     const loginModal = document.getElementById('login-modal');
     const signupModal = document.getElementById('signup-modal');
     const closeModalBtns = document.querySelectorAll('.close-modal');
@@ -38,6 +50,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (modal) {
             // Close all modals first
             closeAllModals();
+            // Close nav panel if open
+            closeNavPanel();
             modal.classList.add('active');
             document.body.style.overflow = 'hidden'; // Prevent scrolling
         }
@@ -54,6 +68,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // Open Login Modal
     if (loginBtn) {
         loginBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            openModal(loginModal);
+        });
+    }
+
+    // Panel Login Button
+    if (panelLoginBtn) {
+        panelLoginBtn.addEventListener('click', (e) => {
             e.preventDefault();
             openModal(loginModal);
         });
