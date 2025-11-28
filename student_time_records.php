@@ -35,269 +35,129 @@ $stmt->execute();
 $records = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
 // Get statistics
-$total_hours = array_sum(array_map(function($r) { return $r['daily_hours'] ?? 0; }, $records));
-$present_count = count(array_filter($records, function($r) { return $r['status'] == 'present'; }));
-$absent_count = count(array_filter($records, function($r) { return $r['status'] == 'absent'; }));
+$total_hours = array_sum(array_map(function ($r) {
+    return $r['daily_hours'] ?? 0; }, $records));
+$present_count = count(array_filter($records, function ($r) {
+    return $r['status'] == 'present'; }));
+$absent_count = count(array_filter($records, function ($r) {
+    return $r['status'] == 'absent'; }));
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Student Time Records - OJT Monitoring System</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f5f5f5;
-        }
-
-        header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px 30px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        }
-
-        header h1 {
-            font-size: 24px;
-        }
-
-        .back-link {
-            color: white;
-            text-decoration: none;
-            margin-right: 20px;
-            display: inline-block;
-        }
-
-        .back-link:hover {
-            text-decoration: underline;
-        }
-
-        .container {
-            max-width: 1100px;
-            margin: 30px auto;
-            padding: 0 20px;
-        }
-
-        .card {
-            background: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-            margin-bottom: 30px;
-        }
-
-        h2 {
-            color: #667eea;
-            margin-bottom: 20px;
-        }
-
-        .student-info {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 20px;
-            margin-bottom: 20px;
-            padding: 20px;
-            background: #f9f9f9;
-            border-radius: 5px;
-        }
-
-        .info-item strong {
-            display: block;
-            color: #667eea;
-            margin-bottom: 3px;
-        }
-
-        .info-item {
-            color: #555;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-
-        .stat-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
-            border-radius: 10px;
-            text-align: center;
-        }
-
-        .stat-card h3 {
-            font-size: 14px;
-            text-transform: uppercase;
-            margin-bottom: 10px;
-            opacity: 0.9;
-        }
-
-        .stat-value {
-            font-size: 32px;
-            font-weight: bold;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        th {
-            background-color: #667eea;
-            color: white;
-            padding: 12px;
-            text-align: left;
-            font-weight: 600;
-        }
-
-        td {
-            padding: 12px;
-            border-bottom: 1px solid #ddd;
-        }
-
-        tr:hover {
-            background-color: #f9f9f9;
-        }
-
-        .status-badge {
-            display: inline-block;
-            padding: 5px 10px;
-            border-radius: 3px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-
-        .status-present {
-            background-color: #d4edda;
-            color: #155724;
-        }
-
-        .status-absent {
-            background-color: #f8d7da;
-            color: #721c24;
-        }
-
-        .status-late {
-            background-color: #fff3cd;
-            color: #856404;
-        }
-
-        .status-pending {
-            background-color: #d1ecf1;
-            color: #0c5460;
-        }
-
-        .no-data {
-            text-align: center;
-            padding: 30px;
-            color: #999;
-        }
-
-        @media (max-width: 768px) {
-            .student-info {
-                grid-template-columns: 1fr;
-            }
-
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-
-            table {
-                font-size: 13px;
-            }
-
-            th, td {
-                padding: 8px;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
+
 <body>
-    <header>
-        <a href="view_students.php" class="back-link">← Back to Students</a>
-        <h1>Student Time Records</h1>
+    <header class="dashboard-header">
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <a href="view_students.php" class="btn btn-secondary"
+                style="padding: 0.5rem 1rem; font-size: 0.875rem;">&larr; Back to Students</a>
+            <h1>Student Time Records</h1>
+        </div>
+        <div class="user-profile">
+            <div class="user-badge">
+                <?php echo ucfirst($_SESSION['user_type']); ?> | <?php echo htmlspecialchars($_SESSION['username']); ?>
+            </div>
+        </div>
     </header>
 
-    <div class="container">
-        <div class="card">
-            <h2><?php echo htmlspecialchars($student['first_name'] . ' ' . $student['last_name']); ?></h2>
-            
-            <div class="student-info">
-                <div class="info-item">
-                    <strong>Username:</strong>
-                    <?php echo htmlspecialchars($student['username']); ?>
+    <div class="main-content fade-in">
+        <div class="card slide-up">
+            <h2 style="color: var(--primary-dark); margin-bottom: 1.5rem;">
+                <?php echo htmlspecialchars($student['first_name'] . ' ' . $student['last_name']); ?></h2>
+
+            <div
+                style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; background: #f9fafb; padding: 1.5rem; border-radius: var(--border-radius);">
+                <div>
+                    <strong
+                        style="display: block; color: var(--primary-color); font-size: 0.875rem; margin-bottom: 0.25rem;">Username</strong>
+                    <div style="color: var(--text-primary); font-weight: 500;">
+                        <?php echo htmlspecialchars($student['username']); ?></div>
                 </div>
-                <div class="info-item">
-                    <strong>Course:</strong>
-                    <?php echo htmlspecialchars($student['course']); ?>
+                <div>
+                    <strong
+                        style="display: block; color: var(--primary-color); font-size: 0.875rem; margin-bottom: 0.25rem;">Course</strong>
+                    <div style="color: var(--text-primary); font-weight: 500;">
+                        <?php echo htmlspecialchars($student['course']); ?></div>
                 </div>
-                <div class="info-item">
-                    <strong>Year Level:</strong>
-                    <?php echo htmlspecialchars($student['year_level']); ?>
+                <div>
+                    <strong
+                        style="display: block; color: var(--primary-color); font-size: 0.875rem; margin-bottom: 0.25rem;">Year
+                        Level</strong>
+                    <div style="color: var(--text-primary); font-weight: 500;">
+                        <?php echo htmlspecialchars($student['year_level']); ?></div>
                 </div>
-                <div class="info-item">
-                    <strong>Company:</strong>
-                    <?php echo htmlspecialchars($student['company_name'] ?? 'Not assigned'); ?>
+                <div>
+                    <strong
+                        style="display: block; color: var(--primary-color); font-size: 0.875rem; margin-bottom: 0.25rem;">Company</strong>
+                    <div style="color: var(--text-primary); font-weight: 500;">
+                        <?php echo htmlspecialchars($student['company_name'] ?? 'Not assigned'); ?></div>
                 </div>
             </div>
         </div>
 
-        <div class="stats-grid">
-            <div class="stat-card">
+        <div class="grid-container" style="margin-bottom: 2rem;">
+            <div class="stat-card slide-up" style="animation-delay: 0.1s;">
                 <h3>Total Hours</h3>
                 <div class="stat-value"><?php echo number_format($total_hours, 2); ?></div>
             </div>
-            <div class="stat-card">
+            <div class="stat-card slide-up" style="animation-delay: 0.2s;">
                 <h3>Present Days</h3>
                 <div class="stat-value"><?php echo $present_count; ?></div>
             </div>
-            <div class="stat-card">
+            <div class="stat-card slide-up" style="animation-delay: 0.3s;">
                 <h3>Absent Days</h3>
                 <div class="stat-value"><?php echo $absent_count; ?></div>
             </div>
         </div>
 
-        <div class="card">
-            <h2>Daily Time Records</h2>
+        <div class="card slide-up" style="animation-delay: 0.4s;">
+            <h2 style="color: var(--primary-dark); margin-bottom: 1.5rem;">Daily Time Records</h2>
             <?php if (empty($records)): ?>
-                <div class="no-data">No time records found.</div>
+                <div style="text-align: center; padding: 2rem; color: var(--text-light);">No time records found.</div>
             <?php else: ?>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Time In</th>
-                            <th>Time Out</th>
-                            <th>Hours</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($records as $record): ?>
-                        <tr>
-                            <td><?php echo date('M d, Y', strtotime($record['record_date'])); ?></td>
-                            <td><?php echo $record['time_in'] ? date('H:i:s', strtotime($record['time_in'])) : '-'; ?></td>
-                            <td><?php echo $record['time_out'] ? date('H:i:s', strtotime($record['time_out'])) : '-'; ?></td>
-                            <td><?php echo $record['daily_hours'] ? number_format($record['daily_hours'], 2) : '-'; ?></td>
-                            <td>
-                                <span class="status-badge status-<?php echo $record['status']; ?>">
-                                    <?php echo ucfirst($record['status']); ?>
-                                </span>
-                            </td>
-                        </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Time In</th>
+                                <th>Time Out</th>
+                                <th>Hours</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($records as $record): ?>
+                                <tr>
+                                    <td style="font-weight: 500; color: var(--text-primary);">
+                                        <?php echo date('M d, Y', strtotime($record['record_date'])); ?></td>
+                                    <td><?php echo $record['time_in'] ? date('h:i A', strtotime($record['time_in'])) : '-'; ?>
+                                    </td>
+                                    <td><?php echo $record['time_out'] ? date('h:i A', strtotime($record['time_out'])) : '-'; ?>
+                                    </td>
+                                    <td style="font-weight: 600; color: var(--primary-color);">
+                                        <?php echo $record['daily_hours'] ? number_format($record['daily_hours'], 2) : '-'; ?>
+                                    </td>
+                                    <td>
+                                        <span class="status-badge status-<?php echo $record['status']; ?>">
+                                            <?php echo ucfirst($record['status']); ?>
+                                        </span>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
             <?php endif; ?>
         </div>
     </div>
 </body>
+
 </html>
