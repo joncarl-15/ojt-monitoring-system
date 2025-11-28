@@ -7,7 +7,30 @@ document.addEventListener('DOMContentLoaded', () => {
         mobileMenuBtn.addEventListener('click', () => {
             navLinks.classList.toggle('active');
             mobileMenuBtn.classList.toggle('active');
+            // toggle overlay
+            const overlay = document.getElementById('nav-overlay');
+            if (overlay) overlay.classList.toggle('active');
         });
+    }
+
+    // Close button inside nav panel
+    const navCloseBtn = document.getElementById('nav-close-btn');
+    const navOverlay = document.getElementById('nav-overlay');
+    function closeNavPanel() {
+        if (navLinks) navLinks.classList.remove('active');
+        if (mobileMenuBtn) mobileMenuBtn.classList.remove('active');
+        if (navOverlay) navOverlay.classList.remove('active');
+    }
+
+    if (navCloseBtn) {
+        navCloseBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            closeNavPanel();
+        });
+    }
+
+    if (navOverlay) {
+        navOverlay.addEventListener('click', closeNavPanel);
     }
 
     // Modal Handling

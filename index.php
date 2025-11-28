@@ -93,6 +93,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
         }
     }
 }
+
+// Get recent announcements for the menu panel
+$announcements = [];
+if (isset($conn)) {
+    $announcements = $conn->query("SELECT * FROM announcements WHERE is_active = 1 ORDER BY posted_at DESC LIMIT 5")->fetch_all(MYSQLI_ASSOC);
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -120,20 +126,50 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
             OJT Monitoring System
         </a>
 
-        <button class="mobile-menu-btn" id="mobile-menu-btn">
+        <div class="navbar-actions">
+            <a href="#" class="btn btn-secondary" id="login-btn" style="margin-right: 10px;">Login</a>
+            <a href="#" class="btn" id="signup-btn">Sign Up</a>
+        </div>
+
+        <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Open navigation">
             <span class="bar"></span>
             <span class="bar"></span>
             <span class="bar"></span>
         </button>
 
-        <div class="nav-links">
-            <a href="#" class="nav-link">Home</a>
-            <a href="#" class="nav-link">Features</a>
-            <a href="#" class="nav-link">About</a>
-            <a href="#" class="nav-link">Contact</a>
-            <a href="#" class="btn btn-secondary" id="login-btn" style="margin-right: 10px;">Login</a>
-            <a href="#" class="btn" id="signup-btn">Sign Up</a>
+        <div class="nav-links" id="primary-nav" role="navigation" aria-label="Primary">
+            <div class="nav-panel-header">
+                <h3>Menu</h3>
+                <button id="nav-close-btn" class="nav-close" aria-label="Close menu">&times;</button>
+            </div>
+
+            <div style="padding: 0.5rem 0 1rem 0;">
+                <a href="#" class="btn btn-secondary nav-panel-login" id="panel-login">Login / Sign Up</a>
+            </div>
+
+            <nav class="nav-panel-links">
+                <a href="#" class="nav-link">Home</a>
+                <a href="#" class="nav-link">Features</a>
+                <a href="#" class="nav-link">About</a>
+            </nav>
+
+            <div class="nav-panel-section">
+                <h4 style="margin-top:1rem; margin-bottom:0.75rem;">Announcements</h4>
+                <?php if (!empty($announcements)): ?>
+                    <?php foreach ($announcements as $a): ?>
+                        <div class="panel-announcement">
+                            <div class="panel-announcement-title"><?php echo htmlspecialchars($a['title']); ?></div>
+                            <div class="panel-announcement-body"><?php echo htmlspecialchars(substr($a['content'],0,120)); ?></div>
+                            <div class="panel-announcement-meta"><?php echo date('M d, Y', strtotime($a['posted_at'])); ?></div>
+                        </div>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <div style="color:var(--text-secondary);">No announcements available.</div>
+                <?php endif; ?>
+            </div>
         </div>
+
+        <div id="nav-overlay" class="nav-overlay"></div>
     </nav>
 
     <!-- Hero Section -->

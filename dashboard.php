@@ -124,8 +124,6 @@ $announcements = $conn->query($announcements_query)->fetch_all(MYSQLI_ASSOC);
             <h3 style="margin-bottom: 1.5rem; border-bottom: 2px solid #e5e7eb; padding-bottom: 0.5rem;">Quick Actions</h3>
             <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 2rem;">
                 <a href="view_students.php" class="btn">View Students</a>
-                <a href="student_activity.php" class="btn">Student Activity</a>
-                <a href="student_time_records.php" class="btn">Time Records</a>
                 <?php if ($user['user_type'] == 'admin'): ?>
                     <a href="manage_users.php" class="btn btn-secondary">Manage Users</a>
                     <a href="manage_companies.php" class="btn btn-secondary">Manage Companies</a>
