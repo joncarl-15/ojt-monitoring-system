@@ -223,8 +223,6 @@ announcements (N) -------- (1) users (admin)
 
 - **Jon Carlo Marasigan** (Lead)
 - **Renz Matthew Simeon**
-- **Carlos Velando**
-- **Enrico Miguel Martinez**
 
 ---
 

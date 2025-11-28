@@ -127,7 +127,7 @@ if (isset($conn)) {
         </a>
 
         <div class="navbar-actions">
-            <a href="#" class="btn btn-secondary" id="login-btn" style="margin-right: 10px;">Login</a>
+            <a href="#" class="btn btn-secondary" id="login-btn">Login</a>
             <a href="#" class="btn" id="signup-btn">Sign Up</a>
         </div>
 
@@ -143,7 +143,7 @@ if (isset($conn)) {
                 <button id="nav-close-btn" class="nav-close" aria-label="Close menu">&times;</button>
             </div>
 
-            <div style="padding: 0.5rem 0 1rem 0;">
+            <div class="nav-panel-login-wrapper">
                 <a href="#" class="btn btn-secondary nav-panel-login" id="panel-login">Login / Sign Up</a>
             </div>
 
@@ -154,7 +154,7 @@ if (isset($conn)) {
             </nav>
 
             <div class="nav-panel-section">
-                <h4 style="margin-top:1rem; margin-bottom:0.75rem;">Announcements</h4>
+                <h4>Announcements</h4>
                 <?php if (!empty($announcements)): ?>
                     <?php foreach ($announcements as $a): ?>
                         <div class="panel-announcement">
@@ -172,7 +172,6 @@ if (isset($conn)) {
         <div id="nav-overlay" class="nav-overlay"></div>
     </nav>
 
-    <!-- Hero Section -->
     <section class="hero">
         <div class="hero-content">
             <h1>Streamline Your OJT Experience</h1>
