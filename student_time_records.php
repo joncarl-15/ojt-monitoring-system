@@ -64,6 +64,8 @@ $absent_count = count(array_filter($records, function ($r) {
             <div class="user-badge">
                 <?php echo ucfirst($_SESSION['user_type']); ?> | <?php echo htmlspecialchars($_SESSION['username']); ?>
             </div>
+            <a href="index.php?logout=1" class="btn btn-danger"
+                style="padding: 8px 16px; font-size: 0.875rem;">Logout</a>
         </div>
     </header>
 

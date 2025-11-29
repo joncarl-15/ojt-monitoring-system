@@ -2,7 +2,9 @@
 require_once 'config.php';
 require_login();
 
+$user = get_user_info($_SESSION['user_id'], $conn);
 $student = get_student_info($_SESSION['user_id'], $conn);
+$is_admin = $user['user_type'] == 'admin';
 
 if (!$student) {
     header("Location: dashboard.php");
@@ -53,6 +55,90 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         } else {
             $error = "Error recording time out: " . $stmt->error;
         }
+    } elseif ($action == 'edit_record') {
+        if (!$is_admin) {
+            $error = 'Only administrators can edit records';
+        } else {
+            $dtr_id = isset($_POST['dtr_id']) ? intval($_POST['dtr_id']) : 0;
+            $time_in_edit = isset($_POST['time_in_edit']) ? $_POST['time_in_edit'] : '';
+            $time_out_edit = isset($_POST['time_out_edit']) ? $_POST['time_out_edit'] : '';
+
+            if (!$dtr_id || empty($time_in_edit)) {
+                $error = 'Invalid record data';
+            } else {
+                // Verify record belongs to student
+                $verify_stmt = $conn->prepare("SELECT * FROM daily_time_records WHERE dtr_id = ? AND student_id = ?");
+                $verify_stmt->bind_param("ii", $dtr_id, $student['student_id']);
+                $verify_stmt->execute();
+                
+                if ($verify_stmt->get_result()->num_rows == 0) {
+                    $error = 'Record not found';
+                } else {
+                    // Calculate hours if both times are provided
+                    $daily_hours = null;
+                    if (!empty($time_out_edit)) {
+                        $time_in_obj = new DateTime($time_in_edit);
+                        $time_out_obj = new DateTime($time_out_edit);
+                        
+                        if ($time_out_obj <= $time_in_obj) {
+                            $error = 'Time Out must be after Time In';
+                        } else {
+                            $interval = $time_in_obj->diff($time_out_obj);
+                            $daily_hours = ($interval->h + ($interval->i / 60));
+                        }
+                    }
+
+                    if (!$error) {
+                        $update_stmt = $conn->prepare("UPDATE daily_time_records SET time_in = ?, time_out = ?, daily_hours = ? WHERE dtr_id = ?");
+                        $update_stmt->bind_param("ssdi", $time_in_edit, $time_out_edit, $daily_hours, $dtr_id);
+
+                        if ($update_stmt->execute()) {
+                            $message = "✓ Record updated successfully";
+                            // Refresh today's record if it was modified
+                            $stmt = $conn->prepare("SELECT * FROM daily_time_records WHERE student_id = ? AND record_date = ?");
+                            $stmt->bind_param("is", $student['student_id'], $today);
+                            $stmt->execute();
+                            $today_record = $stmt->get_result()->fetch_assoc();
+                        } else {
+                            $error = "Error updating record: " . $update_stmt->error;
+                        }
+                    }
+                }
+            }
+        }
+    } elseif ($action == 'delete_record') {
+        if (!$is_admin) {
+            $error = 'Only administrators can delete records';
+        } else {
+            $dtr_id = isset($_POST['dtr_id']) ? intval($_POST['dtr_id']) : 0;
+
+            if (!$dtr_id) {
+                $error = 'Invalid record';
+            } else {
+                // Verify record belongs to student
+                $verify_stmt = $conn->prepare("SELECT * FROM daily_time_records WHERE dtr_id = ? AND student_id = ?");
+                $verify_stmt->bind_param("ii", $dtr_id, $student['student_id']);
+                $verify_stmt->execute();
+                
+                if ($verify_stmt->get_result()->num_rows == 0) {
+                    $error = 'Record not found';
+                } else {
+                    $delete_stmt = $conn->prepare("DELETE FROM daily_time_records WHERE dtr_id = ?");
+                    $delete_stmt->bind_param("i", $dtr_id);
+
+                    if ($delete_stmt->execute()) {
+                        $message = "✓ Record deleted successfully";
+                        // Refresh today's record if it was deleted
+                        $stmt = $conn->prepare("SELECT * FROM daily_time_records WHERE student_id = ? AND record_date = ?");
+                        $stmt->bind_param("is", $student['student_id'], $today);
+                        $stmt->execute();
+                        $today_record = $stmt->get_result()->fetch_assoc();
+                    } else {
+                        $error = "Error deleting record: " . $delete_stmt->error;
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -84,6 +170,8 @@ $recent_records = $recent_stmt->get_result()->fetch_all(MYSQLI_ASSOC);
             <div class="user-badge">
                 <?php echo ucfirst($_SESSION['user_type']); ?> | <?php echo htmlspecialchars($_SESSION['username']); ?>
             </div>
+            <a href="index.php?logout=1" class="btn btn-danger"
+                style="padding: 8px 16px; font-size: 0.875rem;">Logout</a>
         </div>
     </header>
 
@@ -159,6 +247,7 @@ $recent_records = $recent_stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                                 <th>Time Out</th>
                                 <th>Hours</th>
                                 <th>Status</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -176,6 +265,20 @@ $recent_records = $recent_stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                                             <?php echo ucfirst($record['status']); ?>
                                         </span>
                                     </td>
+                                    <td>
+                                        <div style="display: flex; gap: 0.5rem;">
+                                            <?php if ($is_admin): ?>
+                                                <button type="button" class="btn btn-sm btn-secondary" onclick="openEditModal(<?php echo $record['dtr_id']; ?>, '<?php echo htmlspecialchars($record['time_in']); ?>', '<?php echo htmlspecialchars($record['time_out'] ?? ''); ?>')" style="padding: 0.5rem 1rem; font-size: 0.75rem;">
+                                                    Edit
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-danger" onclick="confirmDelete(<?php echo $record['dtr_id']; ?>)" style="padding: 0.5rem 1rem; font-size: 0.75rem;">
+                                                    Delete
+                                                </button>
+                                            <?php else: ?>
+                                                <span style="color: var(--text-light); font-size: 0.875rem;">No actions available</span>
+                                            <?php endif; ?>
+                                        </div>
+                                    </td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
@@ -184,6 +287,96 @@ $recent_records = $recent_stmt->get_result()->fetch_all(MYSQLI_ASSOC);
             <?php endif; ?>
         </div>
     </div>
-</body>
 
+    <!-- Edit Modal -->
+    <div class="modal-overlay" id="edit-modal">
+        <div class="modal-content slide-up">
+            <button class="close-modal" onclick="closeEditModal()">&times;</button>
+            <div class="login-header">
+                <h2>Edit Time Record</h2>
+                <p>Modify the time in and time out values</p>
+            </div>
+            <form method="POST" action="">
+                <input type="hidden" name="action" value="edit_record">
+                <input type="hidden" name="dtr_id" id="edit_dtr_id" value="">
+                
+                <div class="form-group">
+                    <label for="time_in_edit">Time In</label>
+                    <input type="datetime-local" id="time_in_edit" name="time_in_edit" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="time_out_edit">Time Out</label>
+                    <input type="datetime-local" id="time_out_edit" name="time_out_edit">
+                </div>
+
+                <button type="submit" class="btn" style="width: 100%;">Save Changes</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal-overlay" id="delete-modal">
+        <div class="modal-content slide-up">
+            <button class="close-modal" onclick="closeDeleteModal()">&times;</button>
+            <div class="login-header">
+                <h2>Delete Record</h2>
+                <p>Are you sure you want to delete this record? This action cannot be undone.</p>
+            </div>
+            <form method="POST" action="">
+                <input type="hidden" name="action" value="delete_record">
+                <input type="hidden" name="dtr_id" id="delete_dtr_id" value="">
+                
+                <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                    <button type="button" class="btn btn-secondary" onclick="closeDeleteModal()">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function openEditModal(dtrId, timeIn, timeOut) {
+            // Convert datetime format for input
+            const timeInFormatted = new Date(timeIn).toISOString().slice(0, 16);
+            const timeOutFormatted = timeOut ? new Date(timeOut).toISOString().slice(0, 16) : '';
+            
+            document.getElementById('edit_dtr_id').value = dtrId;
+            document.getElementById('time_in_edit').value = timeInFormatted;
+            document.getElementById('time_out_edit').value = timeOutFormatted;
+            
+            document.getElementById('edit-modal').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeEditModal() {
+            document.getElementById('edit-modal').classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        function confirmDelete(dtrId) {
+            document.getElementById('delete_dtr_id').value = dtrId;
+            document.getElementById('delete-modal').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeDeleteModal() {
+            document.getElementById('delete-modal').classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        // Close modal when clicking outside
+        window.addEventListener('click', function(e) {
+            const editModal = document.getElementById('edit-modal');
+            const deleteModal = document.getElementById('delete-modal');
+            
+            if (e.target === editModal) {
+                closeEditModal();
+            }
+            if (e.target === deleteModal) {
+                closeDeleteModal();
+            }
+        });
+    </script>
+</body>
 </html>

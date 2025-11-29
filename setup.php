@@ -54,18 +54,94 @@
 
                 $schema = file_get_contents($schema_file);
 
-                // Execute schema
-                if ($conn_setup->multi_query($schema)) {
-                    echo "<p style='color: var(--success-color); margin-bottom: 0.5rem;'>✓ Database schema created successfully</p>";
+                // Remove SQL comments and parse statements safely
+                $lines = explode("\n", $schema);
+                $clean_schema = "";
+                foreach ($lines as $line) {
+                    // Remove line comments (-- comment)
+                    if (strpos(trim($line), '--') === 0) {
+                        continue; // Skip comment-only lines
+                    }
+                    // Remove inline comments
+                    $line = preg_replace('/--.*$/', '', $line);
+                    $clean_schema .= $line . "\n";
+                }
 
-                    // Consume all results
-                    do {
-                        if ($result = $conn_setup->store_result()) {
-                            $result->free();
+                // Split by semicolon and execute each statement
+                $statements = array_filter(array_map('trim', explode(';', $clean_schema)));
+                $schema_ok = true;
+                foreach ($statements as $statement) {
+                    if (empty($statement)) continue;
+                    try {
+                        $res = $conn_setup->query($statement);
+                        if ($res === TRUE) {
+                            // statement executed successfully
+                            continue;
+                        } else {
+                            // Ignore table/DB exists errors, report others
+                            $errno = $conn_setup->errno;
+                            $error = $conn_setup->error;
+                            if ($errno == 1050 || stripos($error, 'already exists') !== false || $errno == 1007) {
+                                // table or database already exists - not fatal
+                                continue;
+                            } else {
+                                echo "<p style='color: var(--danger-color); margin-bottom: 0.5rem;'>✗ Error executing statement: " . htmlspecialchars($error) . "</p>";
+                                $schema_ok = false;
+                            }
                         }
-                    } while ($conn_setup->next_result());
-                } else {
-                    echo "<p style='color: var(--danger-color); margin-bottom: 0.5rem;'>✗ Error executing schema: " . $conn_setup->error . "</p>";
+                    } catch (mysqli_sql_exception $e) {
+                        // Catch exceptions from query() and check if they are 'already exists' or 'duplicate key' errors
+                        $code = $e->getCode();
+                        $msg = $e->getMessage();
+                        if ($code == 1050 || stripos($msg, 'already exists') !== false || $code == 1061 || stripos($msg, 'duplicate key') !== false) {
+                            // table/database already exists or index/key duplicate - not fatal
+                            continue;
+                        } else {
+                            echo "<p style='color: var(--danger-color); margin-bottom: 0.5rem;'>✗ Exception: " . htmlspecialchars($msg) . "</p>";
+                            $schema_ok = false;
+                        }
+                    }
+                }
+                if ($schema_ok) {
+                    echo "<p style='color: var(--success-color); margin-bottom: 0.5rem;'>✓ Database schema processed (existing objects ignored)</p>";
+                }
+
+                // Add user_id column to companies table if it doesn't exist (migration)
+                $check_column = "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'companies' AND COLUMN_NAME = 'user_id' AND TABLE_SCHEMA = '" . $db_name . "'";
+                $result = $conn_setup->query($check_column);
+                if ($result->num_rows == 0) {
+                    // Column doesn't exist, add it
+                    $alter_sql = "ALTER TABLE companies ADD COLUMN user_id INT AFTER company_id, ADD FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE";
+                    if ($conn_setup->query($alter_sql)) {
+                        echo "<p style='color: var(--success-color); margin-bottom: 0.5rem;'>✓ Added user_id column to companies table</p>";
+                    } else {
+                        echo "<p style='color: #d97706; margin-bottom: 0.5rem;'>⚠ user_id column already exists or migration issue: " . $conn_setup->error . "</p>";
+                    }
+                }
+
+                // Create coordinators table if it doesn't exist (migration)
+                $check_table = "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'coordinators' AND TABLE_SCHEMA = '" . $db_name . "'";
+                $result = $conn_setup->query($check_table);
+                if ($result->num_rows == 0) {
+                    // Table doesn't exist, create it
+                    $create_coordinators = "CREATE TABLE coordinators (
+                        coordinator_id INT PRIMARY KEY AUTO_INCREMENT,
+                        user_id INT NOT NULL UNIQUE,
+                        company_name VARCHAR(150) NOT NULL,
+                        company_address TEXT NOT NULL,
+                        contact_number VARCHAR(20) NOT NULL,
+                        email VARCHAR(100),
+                        department VARCHAR(100),
+                        bio TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+                    )";
+                    if ($conn_setup->query($create_coordinators)) {
+                        echo "<p style='color: var(--success-color); margin-bottom: 0.5rem;'>✓ Created coordinators table</p>";
+                    } else {
+                        echo "<p style='color: var(--danger-color); margin-bottom: 0.5rem;'>✗ Error creating coordinators table: " . $conn_setup->error . "</p>";
+                    }
                 }
 
                 // Create demo users
@@ -81,13 +157,21 @@
                     $password_hash = password_hash($user[2], PASSWORD_BCRYPT);
                     $stmt->bind_param("ssss", $user[0], $user[1], $password_hash, $user[3]);
 
-                    if ($stmt->execute()) {
-                        echo "<p style='color: var(--success-color); margin-bottom: 0.5rem;'>✓ Created user: " . htmlspecialchars($user[0]) . " (" . $user[3] . ")</p>";
-                    } else {
-                        if (strpos($stmt->error, 'Duplicate') !== false) {
+                    try {
+                        if ($stmt->execute()) {
+                            echo "<p style='color: var(--success-color); margin-bottom: 0.5rem;'>✓ Created user: " . htmlspecialchars($user[0]) . " (" . $user[3] . ")</p>";
+                        } else {
+                            if (strpos($stmt->error, 'Duplicate') !== false) {
+                                echo "<p style='color: #d97706; margin-bottom: 0.5rem;'>⚠ User already exists: " . htmlspecialchars($user[0]) . "</p>";
+                            } else {
+                                echo "<p style='color: var(--danger-color); margin-bottom: 0.5rem;'>✗ Error creating user: " . $stmt->error . "</p>";
+                            }
+                        }
+                    } catch (mysqli_sql_exception $e) {
+                        if (stripos($e->getMessage(), 'duplicate') !== false) {
                             echo "<p style='color: #d97706; margin-bottom: 0.5rem;'>⚠ User already exists: " . htmlspecialchars($user[0]) . "</p>";
                         } else {
-                            echo "<p style='color: var(--danger-color); margin-bottom: 0.5rem;'>✗ Error creating user: " . $stmt->error . "</p>";
+                            echo "<p style='color: var(--danger-color); margin-bottom: 0.5rem;'>✗ Error creating user: " . htmlspecialchars($e->getMessage()) . "</p>";
                         }
                     }
                 }
@@ -100,6 +184,17 @@
                 } else {
                     if (strpos($student_stmt->error, 'Duplicate') !== false || strpos($student_stmt->error, 'foreign key') !== false) {
                         echo "<p style='color: #d97706; margin-bottom: 0.5rem;'>⚠ Student profile already exists or configuration issue</p>";
+                    }
+                }
+
+                // Create a demo company for the coordinator
+                $coordinator_stmt = $conn_setup->prepare("INSERT INTO coordinators (user_id, company_name, company_address, contact_number, email) SELECT user_id, 'Tech Solutions Inc.', '123 Business Street, City, Country', '09987654321', 'coordinator@ojt.com' FROM users WHERE username = 'coordinator1' LIMIT 1");
+
+                if ($coordinator_stmt->execute()) {
+                    echo "<p style='color: var(--success-color); margin-bottom: 0.5rem;'>✓ Created demo coordinator profile</p>";
+                } else {
+                    if (strpos($coordinator_stmt->error, 'Duplicate') !== false || strpos($coordinator_stmt->error, 'foreign key') !== false) {
+                        echo "<p style='color: #d97706; margin-bottom: 0.5rem;'>⚠ Coordinator profile already exists or configuration issue</p>";
                     }
                 }
 

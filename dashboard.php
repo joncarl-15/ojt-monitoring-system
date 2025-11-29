@@ -12,8 +12,8 @@ if ($user['user_type'] == 'student') {
     if ($student) {
         $total_hours = get_total_hours($student['student_id'], $conn);
     }
-} elseif ($user['user_type'] == 'company') {
-    $stmt = $conn->prepare("SELECT * FROM companies WHERE user_id = ?");
+} elseif ($user['user_type'] == 'coordinator') {
+    $stmt = $conn->prepare("SELECT * FROM coordinators WHERE user_id = ?");
     $stmt->bind_param("i", $_SESSION['user_id']);
     $stmt->execute();
     $company = $stmt->get_result()->fetch_assoc();
@@ -92,36 +92,24 @@ $announcements = $conn->query($announcements_query)->fetch_all(MYSQLI_ASSOC);
                 </div>
         <?php endif; ?>
 
-        <!-- Company Dashboard -->
-        <?php if ($user['user_type'] == 'company' && $company): ?>
+        <!-- Coordinator Dashboard -->
+        <?php if ($user['user_type'] == 'coordinator' && $company): ?>
                 <h3 style="margin-bottom: 1.5rem; border-bottom: 2px solid #e5e7eb; padding-bottom: 0.5rem;">Company Profile</h3>
                 <div class="grid-container">
                     <div class="card">
                         <h3>Company Information</h3>
                         <div style="line-height: 1.8;">
                             <strong>Name:</strong> <?php echo htmlspecialchars($company['company_name']); ?><br>
-                            <strong>Supervisor:</strong> <?php echo htmlspecialchars($company['supervisor_name']); ?><br>
                             <strong>Contact:</strong> <?php echo htmlspecialchars($company['contact_number']); ?><br>
-                            <strong>Email:</strong> <?php echo htmlspecialchars($company['email'] ?? 'N/A'); ?>
-                        </div>
-                    </div>
-
-                    <div class="card stat-card">
-                        <h3>Assigned Interns</h3>
-                        <div class="stat-value">
-                            <?php
-                            $stmt = $conn->prepare("SELECT COUNT(*) as cnt FROM students WHERE company_id = ?");
-                            $stmt->bind_param("i", $company['company_id']);
-                            $stmt->execute();
-                            echo $stmt->get_result()->fetch_assoc()['cnt'];
-                            ?>
+                            <strong>Email:</strong> <?php echo htmlspecialchars($company['email'] ?? 'N/A'); ?><br>
+                            <strong>Address:</strong> <?php echo htmlspecialchars($company['company_address']); ?>
                         </div>
                     </div>
                 </div>
 
                 <h3 style="margin-bottom: 1.5rem; border-bottom: 2px solid #e5e7eb; padding-bottom: 0.5rem;">Quick Actions</h3>
                 <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 2rem;">
-                    <a href="#" class="btn" onclick="alert('Feature coming soon: View Interns')">View Interns</a>
+                    <a href="view_students.php" class="btn">View Students</a>
                     <a href="#" class="btn btn-secondary" onclick="alert('Feature coming soon: Validate Hours')">Validate Hours</a>
                 </div>
         <?php endif; ?>

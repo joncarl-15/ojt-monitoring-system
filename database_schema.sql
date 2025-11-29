@@ -27,6 +27,21 @@ CREATE TABLE companies (
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
 
+-- Create Coordinators Table (Coordinator Profile Management)
+CREATE TABLE coordinators (
+    coordinator_id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL UNIQUE,
+    company_name VARCHAR(150) NOT NULL,
+    company_address TEXT NOT NULL,
+    contact_number VARCHAR(20) NOT NULL,
+    email VARCHAR(100),
+    department VARCHAR(100),
+    bio TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
 -- Create Students Table (Student Profile Management)
 CREATE TABLE students (
     student_id INT PRIMARY KEY AUTO_INCREMENT,
@@ -112,3 +127,4 @@ CREATE INDEX idx_announcements_admin_id ON announcements(admin_id);
 CREATE INDEX idx_announcements_posted_at ON announcements(posted_at);
 CREATE INDEX idx_users_username ON users(username);
 CREATE INDEX idx_users_user_type ON users(user_type);
+CREATE INDEX idx_coordinators_user_id ON coordinators(user_id);

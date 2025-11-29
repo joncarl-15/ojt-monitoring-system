@@ -57,6 +57,8 @@ $activity_hours = $stmt->get_result()->fetch_assoc()['total'] ?? 0;
             <div class="user-badge">
                 <?php echo ucfirst($_SESSION['user_type']); ?> | <?php echo htmlspecialchars($_SESSION['username']); ?>
             </div>
+            <a href="index.php?logout=1" class="btn btn-danger"
+                style="padding: 8px 16px; font-size: 0.875rem;">Logout</a>
         </div>
     </header>
 
@@ -101,6 +103,7 @@ $activity_hours = $stmt->get_result()->fetch_assoc()['total'] ?? 0;
                                 <th>Time Out</th>
                                 <th>Hours</th>
                                 <th>Status</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -117,6 +120,13 @@ $activity_hours = $stmt->get_result()->fetch_assoc()['total'] ?? 0;
                                         <span class="status-badge status-<?php echo $record['status']; ?>">
                                             <?php echo ucfirst($record['status']); ?>
                                         </span>
+                                    </td>
+                                    <td>
+                                        <div style="display: flex; gap: 0.5rem;">
+                                            <a href="daily_time_records.php" class="btn btn-sm btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.75rem; text-decoration: none;">
+                                                Manage
+                                            </a>
+                                        </div>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>

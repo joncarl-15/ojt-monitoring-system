@@ -54,42 +54,63 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
     $email = isset($_POST['email']) ? trim($_POST['email']) : '';
     $password = isset($_POST['password']) ? trim($_POST['password']) : '';
     $confirm_password = isset($_POST['confirm_password']) ? trim($_POST['confirm_password']) : '';
-    $user_type = isset($_POST['user_type']) ? trim($_POST['user_type']) : 'student';
+    $signup_role = isset($_POST['signup_role']) ? trim($_POST['signup_role']) : 'student';
     $course = isset($_POST['course']) ? trim($_POST['course']) : '';
+    $company = isset($_POST['company']) ? trim($_POST['company']) : '';
+    $company_address = isset($_POST['company_address']) ? trim($_POST['company_address']) : '';
+    $contact_number = isset($_POST['contact_number']) ? trim($_POST['contact_number']) : '';
 
-    if (empty($username) || empty($email) || empty($password) || empty($confirm_password)) {
-        $signup_error = 'All fields are required';
-    } elseif ($password !== $confirm_password) {
-        $signup_error = 'Passwords do not match';
-    } else {
-        // Check if username or email already exists
-        $stmt = $conn->prepare("SELECT user_id FROM users WHERE username = ? OR email = ?");
-        $stmt->bind_param("ss", $username, $email);
-        $stmt->execute();
-        $result = $stmt->get_result();
+    // Validate required fields based on role
+    if ($signup_role == 'student') {
+        $user_type = 'student';
+        if (empty($username) || empty($email) || empty($password) || empty($confirm_password) || empty($course)) {
+            $signup_error = 'All fields are required';
+        }
+    } else if ($signup_role == 'coordinator') {
+        $user_type = 'coordinator';
+        if (empty($username) || empty($email) || empty($password) || empty($confirm_password) || empty($company) || empty($company_address) || empty($contact_number)) {
+            $signup_error = 'All fields are required';
+        }
+    }
 
-        if ($result->num_rows > 0) {
-            $signup_error = 'Username or email already exists';
+    if (empty($signup_error)) {
+        if ($password !== $confirm_password) {
+            $signup_error = 'Passwords do not match';
         } else {
-            // Insert new user
-            $password_hash = password_hash($password, PASSWORD_BCRYPT);
-            $stmt = $conn->prepare("INSERT INTO users (username, email, password_hash, user_type, is_active) VALUES (?, ?, ?, ?, 1)");
-            $stmt->bind_param("ssss", $username, $email, $password_hash, $user_type);
+            // Check if username or email already exists
+            $stmt = $conn->prepare("SELECT user_id FROM users WHERE username = ? OR email = ?");
+            $stmt->bind_param("ss", $username, $email);
+            $stmt->execute();
+            $result = $stmt->get_result();
 
-            if ($stmt->execute()) {
-                $user_id = $stmt->insert_id;
-
-                // If student, create student profile
-                if ($user_type == 'student') {
-                    $stmt_student = $conn->prepare("INSERT INTO students (user_id, first_name, last_name, email_address, course) VALUES (?, ?, ?, ?, ?)");
-                    // Use username as placeholder for names initially
-                    $stmt_student->bind_param("issss", $user_id, $username, $username, $email, $course);
-                    $stmt_student->execute();
-                }
-
-                $signup_success = 'Account created successfully! You can now login.';
+            if ($result->num_rows > 0) {
+                $signup_error = 'Username or email already exists';
             } else {
-                $signup_error = 'Error creating account. Please try again.';
+                // Insert new user
+                $password_hash = password_hash($password, PASSWORD_BCRYPT);
+                $stmt = $conn->prepare("INSERT INTO users (username, email, password_hash, user_type, is_active) VALUES (?, ?, ?, ?, 1)");
+                $stmt->bind_param("ssss", $username, $email, $password_hash, $user_type);
+
+                if ($stmt->execute()) {
+                    $user_id = $stmt->insert_id;
+
+                    // If student, create student profile
+                    if ($user_type == 'student') {
+                        $stmt_student = $conn->prepare("INSERT INTO students (user_id, first_name, last_name, email_address, course) VALUES (?, ?, ?, ?, ?)");
+                        // Use username as placeholder for names initially
+                        $stmt_student->bind_param("issss", $user_id, $username, $username, $email, $course);
+                        $stmt_student->execute();
+                    } else if ($user_type == 'coordinator') {
+                        // Create coordinator profile
+                        $stmt_coordinator = $conn->prepare("INSERT INTO coordinators (user_id, company_name, company_address, contact_number, email) VALUES (?, ?, ?, ?, ?)");
+                        $stmt_coordinator->bind_param("issss", $user_id, $company, $company_address, $contact_number, $email);
+                        $stmt_coordinator->execute();
+                    }
+
+                    $signup_success = 'Account created successfully! You can now login.';
+                } else {
+                    $signup_error = 'Error creating account. Please try again.';
+                }
             }
         }
     }
@@ -188,8 +209,8 @@ if (isset($conn)) {
             <p>Efficiently track hours, manage activities, and monitor progress with our modern OJT Monitoring System.
                 Designed for students, coordinators, and companies.</p>
             <div class="hero-buttons">
-                <a href="#" class="btn" onclick="document.getElementById('signup-btn').click()">Get Started</a>
-                <a href="#" class="btn btn-secondary" onclick="document.getElementById('login-btn').click()">Login</a>
+                <a href="#" class="btn" id="signup-btn">Get Started</a>
+                <a href="#" class="btn btn-secondary" id="login-btn">Login</a>
             </div>
         </div>
     </section>
@@ -321,13 +342,6 @@ if (isset($conn)) {
                 Don't have an account? <a href="#" id="switch-to-signup"
                     style="color: var(--primary-color); font-weight: 600; text-decoration: none;">Sign up</a>
             </div>
-
-            <div class="test-credentials"
-                style="margin-top: 20px; padding: 15px; background-color: #f3f4f6; border-radius: 8px; font-size: 0.875rem; color: #4b5563; text-align: left;">
-                <strong style="display: block; margin-bottom: 5px; color: #1f2937;">Test Credentials:</strong>
-                <p style="margin-bottom: 4px;">Username: admin</p>
-                <p>Password: password123</p>
-            </div>
         </div>
     </div>
 
@@ -345,8 +359,27 @@ if (isset($conn)) {
                 <div class="alert alert-error"><?php echo htmlspecialchars($signup_error); ?></div>
             <?php endif; ?>
 
-            <form method="POST" action="">
+            <!-- Role Selection -->
+            <div id="signup-role-selection" style="margin-bottom: 2rem;">
+                <label style="display: block; margin-bottom: 1rem; font-weight: 600; color: var(--text-primary);">I am a:</label>
+                <div style="display: flex; gap: 1rem;">
+                    <button type="button" class="signup-role-btn" data-role="student" 
+                        style="flex: 1; padding: 1rem; border: 2px solid #e5e7eb; border-radius: var(--border-radius); background: white; cursor: pointer; font-weight: 500; transition: all 0.2s ease;">
+                        👨‍🎓 Student
+                    </button>
+                    <button type="button" class="signup-role-btn" data-role="coordinator" 
+                        style="flex: 1; padding: 1rem; border: 2px solid #e5e7eb; border-radius: var(--border-radius); background: white; cursor: pointer; font-weight: 500; transition: all 0.2s ease;">
+                        🧑‍💼 Coordinator
+                    </button>
+                </div>
+            </div>
+
+            <!-- Signup Form -->
+            <form method="POST" action="" id="signup-form" style="display: none;">
                 <input type="hidden" name="action" value="signup">
+                <input type="hidden" name="signup_role" id="signup_role_input" value="">
+
+                <!-- Common Fields -->
                 <div class="form-group">
                     <label for="signup_username">Username</label>
                     <input type="text" id="signup_username" name="username" required placeholder="Choose a username"
@@ -359,20 +392,38 @@ if (isset($conn)) {
                         value="<?php echo isset($_POST['email']) && $_POST['action'] == 'signup' ? htmlspecialchars($_POST['email']) : ''; ?>">
                 </div>
 
-                <div class="form-group">
-                    <label for="user_type">I am a</label>
-                    <select id="user_type" name="user_type" required
-                        style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: var(--border-radius); font-family: inherit;">
-                        <option value="student">Student</option>
-                        <option value="company">Company Representative</option>
-                        <option value="admin">Admin</option>
-                    </select>
+                <!-- Student Fields -->
+                <div id="student-fields" style="display: none;">
+                    <div class="form-group">
+                        <label for="course">Course</label>
+                        <input type="text" id="course" name="course" placeholder="Enter your course"
+                            style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: var(--border-radius); font-family: inherit;"
+                            value="<?php echo isset($_POST['course']) && $_POST['action'] == 'signup' ? htmlspecialchars($_POST['course']) : ''; ?>">
+                    </div>
                 </div>
 
-                <div class="form-group">
-                    <label for="course">Course</label>
-                    <input type="text" id="course" name="course" required placeholder="Enter your course"
-                        style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: var(--border-radius); font-family: inherit;">
+                <!-- Coordinator Fields -->
+                <div id="coordinator-fields" style="display: none;">
+                    <div class="form-group">
+                        <label for="company">Company Name</label>
+                        <input type="text" id="company" name="company" placeholder="Enter company name"
+                            style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: var(--border-radius); font-family: inherit;"
+                            value="<?php echo isset($_POST['company']) && $_POST['action'] == 'signup' ? htmlspecialchars($_POST['company']) : ''; ?>">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="company_address">Company Address</label>
+                        <input type="text" id="company_address" name="company_address" placeholder="Enter company address"
+                            style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: var(--border-radius); font-family: inherit;"
+                            value="<?php echo isset($_POST['company_address']) && $_POST['action'] == 'signup' ? htmlspecialchars($_POST['company_address']) : ''; ?>">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="contact_number">Contact Number</label>
+                        <input type="tel" id="contact_number" name="contact_number" placeholder="Enter contact number"
+                            style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: var(--border-radius); font-family: inherit;"
+                            value="<?php echo isset($_POST['contact_number']) && $_POST['action'] == 'signup' ? htmlspecialchars($_POST['contact_number']) : ''; ?>">
+                    </div>
                 </div>
 
                 <div class="form-group">
@@ -388,6 +439,11 @@ if (isset($conn)) {
                 </div>
 
                 <button type="submit" class="btn" style="width: 100%;">Sign Up</button>
+                <button type="button" class="btn-back-icon" id="back-to-role-selection" title="Back to role selection">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
             </form>
 
             <div style="text-align: center; margin-top: 1.5rem; font-size: 0.9rem; color: var(--text-secondary);">
@@ -396,6 +452,58 @@ if (isset($conn)) {
             </div>
         </div>
     </div>
+
+    <script>
+        // Handle role selection
+        document.querySelectorAll('.signup-role-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const role = this.dataset.role;
+                document.getElementById('signup_role_input').value = role;
+                
+                // Update button styles
+                document.querySelectorAll('.signup-role-btn').forEach(b => {
+                    b.style.borderColor = '#e5e7eb';
+                    b.style.backgroundColor = 'white';
+                    b.style.color = 'var(--text-primary)';
+                });
+                this.style.borderColor = 'var(--primary-color)';
+                this.style.backgroundColor = 'var(--primary-color)';
+                this.style.color = 'white';
+                
+                // Show form
+                document.getElementById('signup-role-selection').style.display = 'none';
+                document.getElementById('signup-form').style.display = 'block';
+                
+                // Show/hide role-specific fields
+                if (role === 'student') {
+                    document.getElementById('student-fields').style.display = 'block';
+                    document.getElementById('coordinator-fields').style.display = 'none';
+                    document.getElementById('course').required = true;
+                    document.getElementById('company').required = false;
+                    document.getElementById('company_address').required = false;
+                    document.getElementById('contact_number').required = false;
+                } else if (role === 'coordinator') {
+                    document.getElementById('student-fields').style.display = 'none';
+                    document.getElementById('coordinator-fields').style.display = 'block';
+                    document.getElementById('course').required = false;
+                    document.getElementById('company').required = true;
+                    document.getElementById('company_address').required = true;
+                    document.getElementById('contact_number').required = true;
+                }
+            });
+        });
+        
+        // Back button
+        document.getElementById('back-to-role-selection').addEventListener('click', function() {
+            document.getElementById('signup-form').style.display = 'none';
+            document.getElementById('signup-role-selection').style.display = 'block';
+            document.querySelectorAll('.signup-role-btn').forEach(b => {
+                b.style.borderColor = '#e5e7eb';
+                b.style.backgroundColor = 'white';
+                b.style.color = 'var(--text-primary)';
+            });
+        });
+    </script>
 
     <script src="assets/js/main.js"></script>
 </body>
