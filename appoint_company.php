@@ -56,6 +56,13 @@ $students_query = "SELECT s.student_id, s.first_name, s.last_name, s.course, s.y
                    LEFT JOIN companies c ON s.company_id = c.company_id 
                    ORDER BY s.last_name, s.first_name";
 $students = $conn->query($students_query)->fetch_all(MYSQLI_ASSOC);
+
+// Get all existing company names from both companies and coordinators tables
+$companies_query = "SELECT DISTINCT company_name FROM companies WHERE company_name IS NOT NULL AND company_name != '' 
+                    UNION 
+                    SELECT DISTINCT company_name FROM coordinators WHERE company_name IS NOT NULL AND company_name != ''
+                    ORDER BY company_name";
+$existing_companies = $conn->query($companies_query)->fetch_all(MYSQLI_ASSOC);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -119,8 +126,15 @@ $students = $conn->query($students_query)->fetch_all(MYSQLI_ASSOC);
                 <div class="form-group">
                     <label for="company_name">Company Name</label>
                     <input type="text" id="company_name" name="company_name" required 
+                           list="company_list"
                            style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: var(--border-radius); font-family: inherit;"
-                           placeholder="Enter company name">
+                           placeholder="Select or type company name">
+                    <datalist id="company_list">
+                        <?php foreach ($existing_companies as $company): ?>
+                            <option value="<?php echo htmlspecialchars($company['company_name']); ?>"></option>
+                        <?php endforeach; ?>
+                        <option value="Others (Please specify in textbox)"></option>
+                    </datalist>
                 </div>
 
                 <div style="display: flex; gap: 1rem; margin-top: 2rem;">
