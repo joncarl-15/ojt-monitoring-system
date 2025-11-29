@@ -122,7 +122,8 @@ $announcements = $conn->query($announcements_query)->fetch_all(MYSQLI_ASSOC);
                         <h3>Total Students</h3>
                         <div class="stat-value">
                             <?php
-                            $count = $conn->query("SELECT COUNT(*) as cnt FROM students")->fetch_assoc();
+                            // Count unique student users (one per user_id)
+                            $count = $conn->query("SELECT COUNT(DISTINCT s.user_id) as cnt FROM students s JOIN users u ON s.user_id = u.user_id WHERE u.user_type = 'student'")->fetch_assoc();
                             echo $count['cnt'];
                             ?>
                         </div>
@@ -132,7 +133,8 @@ $announcements = $conn->query($announcements_query)->fetch_all(MYSQLI_ASSOC);
                         <h3>Total Companies</h3>
                         <div class="stat-value">
                             <?php
-                            $count = $conn->query("SELECT COUNT(*) as cnt FROM companies")->fetch_assoc();
+                            // Count companies from coordinators (coordinator users)
+                            $count = $conn->query("SELECT COUNT(*) as cnt FROM coordinators c JOIN users u ON c.user_id = u.user_id WHERE u.user_type = 'coordinator'")->fetch_assoc();
                             echo $count['cnt'];
                             ?>
                         </div>

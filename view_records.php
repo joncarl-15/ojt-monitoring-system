@@ -66,7 +66,7 @@ $activity_hours = $stmt->get_result()->fetch_assoc()['total'] ?? 0;
         <div class="grid-container">
             <div class="card stat-card">
                 <h3>Total Hours</h3>
-                <div class="stat-value"><?php echo number_format($total_hours, 1); ?></div>
+                <div class="stat-value"><?php echo number_format($total_hours, 2); ?></div>
                 <div style="font-size: 0.875rem; opacity: 0.9;">from daily records</div>
             </div>
             <div class="card stat-card"
@@ -84,7 +84,7 @@ $activity_hours = $stmt->get_result()->fetch_assoc()['total'] ?? 0;
             <div class="card stat-card"
                 style="background: linear-gradient(135deg, var(--warning-color) 0%, #b45309 100%);">
                 <h3>Activity Hours</h3>
-                <div class="stat-value"><?php echo number_format($activity_hours, 1); ?></div>
+                <div class="stat-value"><?php echo number_format($activity_hours, 2); ?></div>
                 <div style="font-size: 0.875rem; opacity: 0.9;">from activity logs</div>
             </div>
         </div>
@@ -114,7 +114,8 @@ $activity_hours = $stmt->get_result()->fetch_assoc()['total'] ?? 0;
                                     </td>
                                     <td><?php echo $record['time_out'] ? date('h:i A', strtotime($record['time_out'])) : '-'; ?>
                                     </td>
-                                    <td><?php echo $record['daily_hours'] ? number_format($record['daily_hours'], 2) : '-'; ?>
+                                    <td style="font-weight: 600; color: var(--primary-color);">
+                                        <?php echo $record['daily_hours'] ? number_format($record['daily_hours'], 2) . ' hrs' : '-'; ?>
                                     </td>
                                     <td>
                                         <span class="status-badge status-<?php echo $record['status']; ?>">

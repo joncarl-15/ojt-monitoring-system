@@ -9,8 +9,15 @@ if ($user['user_type'] != 'admin') {
     exit;
 }
 
-// Get all companies
-$stmt = $conn->prepare("SELECT * FROM companies ORDER BY created_at DESC");
+// Get all companies from coordinators (coordinator users)
+$stmt = $conn->prepare("
+    SELECT c.coordinator_id, c.company_name, c.company_address as address, 
+           c.contact_number, c.email, c.department, c.bio,
+           u.username as coordinator_username
+    FROM coordinators c
+    JOIN users u ON c.user_id = u.user_id AND u.user_type = 'coordinator'
+    ORDER BY c.created_at DESC
+");
 $stmt->execute();
 $companies = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 ?>
@@ -66,9 +73,15 @@ $companies = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                                 <?php echo htmlspecialchars($company['company_name']); ?></div>
                             <div style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.6;">
                                 <div style="margin-bottom: 0.5rem;">
-                                    <strong style="color: var(--primary-dark);">Supervisor:</strong>
-                                    <?php echo htmlspecialchars($company['supervisor_name']); ?>
+                                    <strong style="color: var(--primary-dark);">Coordinator:</strong>
+                                    <?php echo htmlspecialchars($company['coordinator_username'] ?? 'N/A'); ?>
                                 </div>
+                                <?php if (!empty($company['department'])): ?>
+                                <div style="margin-bottom: 0.5rem;">
+                                    <strong style="color: var(--primary-dark);">Department:</strong>
+                                    <?php echo htmlspecialchars($company['department']); ?>
+                                </div>
+                                <?php endif; ?>
                                 <div style="margin-bottom: 0.5rem;">
                                     <strong style="color: var(--primary-dark);">Contact:</strong>
                                     <?php echo htmlspecialchars($company['contact_number']); ?>

@@ -15,10 +15,14 @@ $error = '';
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $student_id = $_POST['student_id'] ?? '';
-    $company_name = trim($_POST['company_name'] ?? '');
+    $company_name_dropdown = trim($_POST['company_name'] ?? '');
+    $company_name_custom = trim($_POST['company_name_custom'] ?? '');
+    
+    // Use custom name if provided, otherwise use dropdown selection
+    $company_name = !empty($company_name_custom) ? $company_name_custom : $company_name_dropdown;
     
     if (empty($student_id) || empty($company_name)) {
-        $error = 'Please select a student and enter a company name';
+        $error = 'Please select a student and enter or select a company name';
     } else {
         // Check if company exists, if not create it
         $stmt = $conn->prepare("SELECT company_id FROM companies WHERE company_name = ?");
@@ -50,17 +54,24 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 }
 
-// Get all students
-$students_query = "SELECT s.student_id, s.first_name, s.last_name, s.course, s.year_level, c.company_name 
-                   FROM students s 
+// Get all students (only one per user_id to match student users)
+$students_query = "SELECT s.student_id, s.first_name, s.last_name, s.course, s.year_level, c.company_name, u.username
+                   FROM students s
+                   INNER JOIN (
+                       SELECT user_id, MAX(student_id) as latest_student_id
+                       FROM students
+                       GROUP BY user_id
+                   ) latest ON s.student_id = latest.latest_student_id
+                   JOIN users u ON s.user_id = u.user_id AND u.user_type = 'student'
                    LEFT JOIN companies c ON s.company_id = c.company_id 
                    ORDER BY s.last_name, s.first_name";
 $students = $conn->query($students_query)->fetch_all(MYSQLI_ASSOC);
 
-// Get all existing company names from both companies and coordinators tables
-$companies_query = "SELECT DISTINCT company_name FROM companies WHERE company_name IS NOT NULL AND company_name != '' 
-                    UNION 
-                    SELECT DISTINCT company_name FROM coordinators WHERE company_name IS NOT NULL AND company_name != ''
+// Get all existing company names from coordinators (coordinator users)
+$companies_query = "SELECT DISTINCT company_name 
+                    FROM coordinators c
+                    JOIN users u ON c.user_id = u.user_id AND u.user_type = 'coordinator'
+                    WHERE company_name IS NOT NULL AND company_name != ''
                     ORDER BY company_name";
 $existing_companies = $conn->query($companies_query)->fetch_all(MYSQLI_ASSOC);
 ?>
@@ -125,16 +136,25 @@ $existing_companies = $conn->query($companies_query)->fetch_all(MYSQLI_ASSOC);
 
                 <div class="form-group">
                     <label for="company_name">Company Name</label>
-                    <input type="text" id="company_name" name="company_name" required 
-                           list="company_list"
-                           style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: var(--border-radius); font-family: inherit;"
-                           placeholder="Select or type company name">
-                    <datalist id="company_list">
-                        <?php foreach ($existing_companies as $company): ?>
-                            <option value="<?php echo htmlspecialchars($company['company_name']); ?>"></option>
-                        <?php endforeach; ?>
-                        <option value="Others (Please specify in textbox)"></option>
-                    </datalist>
+                    <div style="border: 1px solid #d1d5db; border-radius: 12px; overflow: hidden; background: white; transition: all 0.3s ease;" id="company_container">
+                        <select id="company_name" name="company_name" required 
+                               style="width: 100%; padding: 0.75rem; border: none; border-bottom: 1px solid #e5e7eb; border-radius: 12px 12px 0 0; font-family: inherit; background: transparent; cursor: pointer; transition: all 0.3s ease; appearance: none; background-image: url('data:image/svg+xml;charset=UTF-8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"12\" height=\"12\" viewBox=\"0 0 12 12\"><path fill=\"%23374151\" d=\"M6 9L1 4h10z\"/></svg>'); background-repeat: no-repeat; background-position: right 0.75rem center; background-size: 12px; padding-right: 2.5rem; outline: none;"
+                               onfocus="document.getElementById('company_container').style.borderColor='var(--primary-color)'; document.getElementById('company_container').style.boxShadow='0 0 0 3px rgba(34, 197, 94, 0.1)'"
+                               onblur="document.getElementById('company_container').style.borderColor='#d1d5db'; document.getElementById('company_container').style.boxShadow='none'">
+                            <option value="">-- Select a company --</option>
+                            <?php foreach ($existing_companies as $company): ?>
+                                <option value="<?php echo htmlspecialchars($company['company_name']); ?>">
+                                    <?php echo htmlspecialchars($company['company_name']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <input type="text" id="company_name_custom" name="company_name_custom" 
+                               style="width: 100%; padding: 0.75rem; border: none; border-radius: 0 0 12px 12px; font-family: inherit; outline: none;"
+                               placeholder="Or type a new company name"
+                               onfocus="document.getElementById('company_container').style.borderColor='var(--primary-color)'; document.getElementById('company_container').style.boxShadow='0 0 0 3px rgba(34, 197, 94, 0.1)'"
+                               onblur="document.getElementById('company_container').style.borderColor='#d1d5db'; document.getElementById('company_container').style.boxShadow='none'">
+                    </div>
+                    <small style="color: var(--text-light); font-size: 0.875rem; display: block; margin-top: 0.5rem;">Leave blank if selecting from dropdown above</small>
                 </div>
 
                 <div style="display: flex; gap: 1rem; margin-top: 2rem;">
@@ -173,6 +193,40 @@ $existing_companies = $conn->query($companies_query)->fetch_all(MYSQLI_ASSOC);
             <?php endif; ?>
         </div>
     </div>
+
+    <script>
+        // Make the dropdown and custom input work together smoothly
+        const companyDropdown = document.getElementById('company_name');
+        const companyCustom = document.getElementById('company_name_custom');
+        const companyContainer = document.getElementById('company_container');
+
+        // When dropdown is selected, clear custom input
+        companyDropdown.addEventListener('change', function() {
+            if (this.value) {
+                companyCustom.value = '';
+            }
+        });
+
+        // When custom input is typed, clear dropdown selection
+        companyCustom.addEventListener('input', function() {
+            if (this.value) {
+                companyDropdown.value = '';
+            }
+        });
+
+        // Add hover effect to container
+        companyContainer.addEventListener('mouseenter', function() {
+            if (document.activeElement !== companyDropdown && document.activeElement !== companyCustom) {
+                this.style.borderColor = 'var(--primary-color)';
+            }
+        });
+
+        companyContainer.addEventListener('mouseleave', function() {
+            if (document.activeElement !== companyDropdown && document.activeElement !== companyCustom) {
+                this.style.borderColor = '#d1d5db';
+            }
+        });
+    </script>
 </body>
 
 </html>

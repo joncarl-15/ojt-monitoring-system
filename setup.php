@@ -176,15 +176,21 @@
                     }
                 }
 
-                // Create a demo student profile (linked to student1)
-                $student_stmt = $conn_setup->prepare("INSERT INTO students (user_id, first_name, last_name, middle_name, course, year_level, contact_number, email_address) SELECT user_id, 'John', 'Doe', 'Sample', 'Bachelor of Science in Information Technology', '3rd Year', '09123456789', 'student1@ojt.com' FROM users WHERE username = 'student1' LIMIT 1");
+                // Create a demo student profile (linked to student1) - only if it doesn't exist
+                $check_student = $conn_setup->prepare("SELECT student_id FROM students s JOIN users u ON s.user_id = u.user_id WHERE u.username = 'student1' LIMIT 1");
+                $check_student->execute();
+                $student_exists = $check_student->get_result()->num_rows > 0;
+                
+                if (!$student_exists) {
+                    $student_stmt = $conn_setup->prepare("INSERT INTO students (user_id, first_name, last_name, middle_name, course, year_level, contact_number, email_address) SELECT user_id, 'John', 'Doe', 'Sample', 'Bachelor of Science in Information Technology', '3rd Year', '09123456789', 'student1@ojt.com' FROM users WHERE username = 'student1' LIMIT 1");
 
-                if ($student_stmt->execute()) {
-                    echo "<p style='color: var(--success-color); margin-bottom: 0.5rem;'>✓ Created demo student profile</p>";
-                } else {
-                    if (strpos($student_stmt->error, 'Duplicate') !== false || strpos($student_stmt->error, 'foreign key') !== false) {
-                        echo "<p style='color: #d97706; margin-bottom: 0.5rem;'>⚠ Student profile already exists or configuration issue</p>";
+                    if ($student_stmt->execute()) {
+                        echo "<p style='color: var(--success-color); margin-bottom: 0.5rem;'>✓ Created demo student profile</p>";
+                    } else {
+                        echo "<p style='color: #d97706; margin-bottom: 0.5rem;'>⚠ Error creating student profile: " . $student_stmt->error . "</p>";
                     }
+                } else {
+                    echo "<p style='color: #d97706; margin-bottom: 0.5rem;'>⚠ Student profile already exists for student1</p>";
                 }
 
                 // Create a demo company for the coordinator

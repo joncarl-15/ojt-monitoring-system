@@ -68,13 +68,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 $companies_stmt = $conn->query("SELECT company_id, company_name FROM companies ORDER BY company_name");
 $companies = $companies_stmt->fetch_all(MYSQLI_ASSOC);
 
-// Get all students with their info
+// Get all students with their info (only one per user_id to match student users)
 $stmt = $conn->prepare("
     SELECT s.*, u.username, c.company_name, 
            COUNT(DISTINCT d.dtr_id) as dtr_count,
            COALESCE(SUM(d.daily_hours), 0) as total_hours
     FROM students s
-    JOIN users u ON s.user_id = u.user_id
+    INNER JOIN (
+        SELECT user_id, MAX(student_id) as latest_student_id
+        FROM students
+        GROUP BY user_id
+    ) latest ON s.student_id = latest.latest_student_id
+    JOIN users u ON s.user_id = u.user_id AND u.user_type = 'student'
     LEFT JOIN companies c ON s.company_id = c.company_id
     LEFT JOIN daily_time_records d ON s.student_id = d.student_id
     GROUP BY s.student_id

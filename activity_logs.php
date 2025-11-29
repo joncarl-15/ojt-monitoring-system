@@ -172,6 +172,8 @@ $activity_logs = $logs_stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                     <div class="form-group">
                         <label for="hours_rendered">Hours Rendered</label>
                         <input type="number" id="hours_rendered" name="hours_rendered" step="0.25" min="0" required
+                            placeholder="Enter hours (e.g., 8.00)"
+                            style="width: 100%; padding: 12px 16px; border: 1px solid #cbd5e1; border-radius: var(--border-radius); font-size: 1rem; transition: all var(--transition-speed); background-color: white; color: var(--text-primary); font-family: inherit;"
                             value="<?php echo isset($_POST['hours_rendered']) ? htmlspecialchars($_POST['hours_rendered']) : ''; ?>">
                     </div>
 
@@ -276,7 +278,9 @@ $activity_logs = $logs_stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
                 <div class="form-group">
                     <label for="edit_hours_rendered">Hours Rendered</label>
-                    <input type="number" id="edit_hours_rendered" name="hours_rendered" step="0.25" min="0" required>
+                    <input type="number" id="edit_hours_rendered" name="hours_rendered" step="0.25" min="0" required
+                        placeholder="Enter hours (e.g., 8.00)"
+                        style="width: 100%; padding: 12px 16px; border: 1px solid #cbd5e1; border-radius: var(--border-radius); font-size: 1rem; transition: all var(--transition-speed); background-color: white; color: var(--text-primary); font-family: inherit;">
                 </div>
 
                 <div class="form-group">
