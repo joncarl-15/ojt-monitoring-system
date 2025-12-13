@@ -128,3 +128,11 @@ CREATE INDEX idx_announcements_posted_at ON announcements(posted_at);
 CREATE INDEX idx_users_username ON users(username);
 CREATE INDEX idx_users_user_type ON users(user_type);
 CREATE INDEX idx_coordinators_user_id ON coordinators(user_id);
+
+-- Insert a sample coordinator user
+INSERT INTO `users` (`user_id`, `username`, `email`, `password_hash`, `user_type`, `created_at`, `updated_at`, `is_active`) VALUES
+(4, 'coor', 'coor@example.com', '$2y$10$E/GR.I2.gvpjg2pG1c9wz.VC28sWzHw7T3jXp8E5XwQvV8bE3c3eC', 'coordinator', '2025-11-20 04:54:19', '2025-11-20 04:54:19', 1);
+
+-- Insert a sample coordinator profile
+INSERT INTO `coordinators` (`coordinator_id`, `user_id`, `company_name`, `company_address`, `contact_number`, `email`, `department`, `bio`, `created_at`, `updated_at`) VALUES
+(1, 4, 'Sample Company', '123 Sample St, Sample City', '123-456-7890', 'coor@example.com', 'HR', 'Sample bio', '2025-11-20 04:54:19', '2025-11-20 04:54:19');
