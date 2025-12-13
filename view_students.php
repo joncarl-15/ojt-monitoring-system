@@ -68,8 +68,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 $companies_stmt = $conn->query("SELECT company_id, company_name FROM companies ORDER BY company_name");
 $companies = $companies_stmt->fetch_all(MYSQLI_ASSOC);
 
-// Get all students with their info (only one per user_id to match student users)
-$stmt = $conn->prepare("
+// Get all students with their info
+$sql = "
     SELECT s.*, u.username, c.company_name, 
            COUNT(DISTINCT d.dtr_id) as dtr_count,
            COALESCE(SUM(d.daily_hours), 0) as total_hours
@@ -82,9 +82,41 @@ $stmt = $conn->prepare("
     JOIN users u ON s.user_id = u.user_id AND u.user_type = 'student'
     LEFT JOIN companies c ON s.company_id = c.company_id
     LEFT JOIN daily_time_records d ON s.student_id = d.student_id
-    GROUP BY s.student_id
-    ORDER BY s.first_name ASC
-");
+";
+
+// Coordinator Filter
+$params = [];
+$types = "";
+
+if ($user['user_type'] == 'coordinator') {
+    // Robust Query: Find *exact same* company name to bridge mismatch IDs
+    // This allows Student(CompanyID=1) and Coordinator(CompanyID=2) to match if Name="Unlad Foundation"
+    
+    // Get Coordinator's Company Name
+    $coord_stmt = $conn->prepare("SELECT company_name FROM coordinators WHERE user_id = ?");
+    $coord_stmt->bind_param("i", $_SESSION['user_id']);
+    $coord_stmt->execute();
+    $coord_res = $coord_stmt->get_result();
+    
+    if ($coord_row = $coord_res->fetch_assoc()) {
+        $my_company_name = $coord_row['company_name'];
+        // Modify the MAIN Query to join on Name instead of ID
+        // Note: $sql already joins 'companies c'. We constrain 'c.company_name'
+        $sql .= " WHERE c.company_name = ?";
+        $params[] = $my_company_name;
+        $types .= "s";
+    } else {
+         // Coordinator profile incomplete?
+         $sql .= " WHERE 1=0";
+    }
+}
+
+$sql .= " GROUP BY s.student_id ORDER BY s.first_name ASC";
+
+$stmt = $conn->prepare($sql);
+if (!empty($params)) {
+    $stmt->bind_param($types, ...$params);
+}
 $stmt->execute();
 $students = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 ?>

@@ -27,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     if ($action == 'time_in' && !$today_record) {
         $time_in = date('Y-m-d H:i:s');
-        $status = 'present';
+        $status = 'pending';
 
         $stmt = $conn->prepare("INSERT INTO daily_time_records (student_id, record_date, time_in, status) VALUES (?, ?, ?, ?)");
         $stmt->bind_param("isss", $student['student_id'], $today, $time_in, $status);

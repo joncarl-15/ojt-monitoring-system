@@ -37,7 +37,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
                 $_SESSION['username'] = $user['username'];
                 $_SESSION['user_type'] = $user['user_type'];
 
-                header("Location: dashboard.php");
+                if ($user['user_type'] == 'student') {
+                    header("Location: welcome.php");
+                } else {
+                    header("Location: dashboard.php");
+                }
                 exit;
             } else {
                 $error = 'Invalid username or password';
@@ -65,6 +69,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
         $user_type = 'student';
         if (empty($username) || empty($email) || empty($password) || empty($confirm_password) || empty($course)) {
             $signup_error = 'All fields are required';
+        }
+        // Basic check for full name if we are about to rely on it, 
+        // but let's check it inside the main block or just add it to the empty check above? 
+        // The original code checked specific variables. 
+        // Let's add full_name validity check.
+        $full_name = isset($_POST['full_name']) ? trim($_POST['full_name']) : '';
+        if (empty($full_name)) {
+             $signup_error = 'Full Name is required';
         }
     } else if ($signup_role == 'coordinator') {
         $user_type = 'coordinator';
@@ -97,8 +109,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
                     // If student, create student profile
                     if ($user_type == 'student') {
                         $stmt_student = $conn->prepare("INSERT INTO students (user_id, first_name, last_name, email_address, course) VALUES (?, ?, ?, ?, ?)");
-                        // Use username as placeholder for names initially
-                        $stmt_student->bind_param("issss", $user_id, $username, $username, $email, $course);
+                        
+                        // Split Full Name
+                        // Strategy: First word is First Name, rest is Last Name. 
+                        // If only one word, Last Name is empty.
+                        $name_parts = explode(' ', $full_name, 2);
+                        $fname = $name_parts[0];
+                        $lname = isset($name_parts[1]) ? $name_parts[1] : '';
+                        
+                        $stmt_student->bind_param("issss", $user_id, $fname, $lname, $email, $course);
                         $stmt_student->execute();
                     } else if ($user_type == 'coordinator') {
                         // Create coordinator profile
@@ -183,21 +202,7 @@ if (isset($conn)) {
                 <a href="#about" class="nav-link">About</a>
             </nav>
 
-            <div class="nav-panel-section">
-                <h4>Announcements</h4>
-                <?php if (!empty($announcements)): ?>
-                    <?php foreach ($announcements as $a): ?>
-                        <div class="panel-announcement">
-                            <div class="panel-announcement-title"><?php echo htmlspecialchars($a['title']); ?></div>
-                            <div class="panel-announcement-body"><?php echo htmlspecialchars(substr($a['content'], 0, 120)); ?>
-                            </div>
-                            <div class="panel-announcement-meta"><?php echo date('M d, Y', strtotime($a['posted_at'])); ?></div>
-                        </div>
-                    <?php endforeach; ?>
-                <?php else: ?>
-                    <div style="color:var(--text-secondary);">No announcements available.</div>
-                <?php endif; ?>
-            </div>
+            <!-- Announcements Removed per Request -->
         </div>
 
         <div id="nav-overlay" class="nav-overlay"></div>
@@ -395,6 +400,12 @@ if (isset($conn)) {
                 <!-- Student Fields -->
                 <div id="student-fields" style="display: none;">
                     <div class="form-group">
+                        <label for="full_name">Full Name</label>
+                        <input type="text" id="full_name" name="full_name" placeholder="e.g. Jon Carlo Alba Marasigan"
+                            style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: var(--border-radius); font-family: inherit;"
+                            value="<?php echo isset($_POST['full_name']) && $_POST['action'] == 'signup' ? htmlspecialchars($_POST['full_name']) : ''; ?>">
+                    </div>
+                    <div class="form-group">
                         <label for="course">Course</label>
                         <input type="text" id="course" name="course" placeholder="Enter your course"
                             style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: var(--border-radius); font-family: inherit;"
@@ -479,6 +490,7 @@ if (isset($conn)) {
                     document.getElementById('student-fields').style.display = 'block';
                     document.getElementById('coordinator-fields').style.display = 'none';
                     document.getElementById('course').required = true;
+                    document.getElementById('full_name').required = true;
                     document.getElementById('company').required = false;
                     document.getElementById('company_address').required = false;
                     document.getElementById('contact_number').required = false;
@@ -486,6 +498,7 @@ if (isset($conn)) {
                     document.getElementById('student-fields').style.display = 'none';
                     document.getElementById('coordinator-fields').style.display = 'block';
                     document.getElementById('course').required = false;
+                    document.getElementById('full_name').required = false;
                     document.getElementById('company').required = true;
                     document.getElementById('company_address').required = true;
                     document.getElementById('contact_number').required = true;

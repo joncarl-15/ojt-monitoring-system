@@ -38,8 +38,20 @@ $announcements = $conn->query($announcements_query)->fetch_all(MYSQLI_ASSOC);
     <header class="dashboard-header">
         <h1>OJT Monitoring System</h1>
         <div class="user-profile">
-            <div class="user-badge">
-                <?php echo ucfirst($_SESSION['user_type']); ?> | <?php echo htmlspecialchars($_SESSION['username']); ?>
+            <div class="user-badge" style="display:flex; align-items:center; gap:0.5rem;">
+                <!-- Profile Link -->
+                <a href="profile.php" style="text-decoration:none; color:inherit; display:flex; align-items:center; gap:0.5rem;" title="Edit Profile">
+                    <?php if (!empty($user['profile_picture'])): ?>
+                        <img src="<?php echo htmlspecialchars($user['profile_picture']); ?>" style="width:32px; height:32px; border-radius:50%; object-fit:cover; border: 2px solid rgba(255,255,255,0.2);">
+                    <?php else: ?>
+                        <div style="width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,0.2); display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:0.8rem;">
+                            <?php echo substr(strtoupper($user['username']), 0, 1); ?>
+                        </div>
+                    <?php endif; ?>
+                    <div>
+                        <?php echo ucfirst($_SESSION['user_type']); ?> | <?php echo htmlspecialchars($_SESSION['username']); ?>
+                    </div>
+                </a>
             </div>
             <a href="index.php?logout=1" class="btn btn-danger"
                 style="padding: 8px 16px; font-size: 0.875rem;">Logout</a>
@@ -89,6 +101,7 @@ $announcements = $conn->query($announcements_query)->fetch_all(MYSQLI_ASSOC);
                     <a href="daily_time_records.php" class="btn">Time In/Out</a>
                     <a href="activity_logs.php" class="btn">Activity Logs</a>
                     <a href="view_records.php" class="btn btn-secondary">View Records</a>
+                    <a href="profile.php" class="btn btn-secondary">My Profile</a>
                 </div>
         <?php endif; ?>
 
@@ -110,12 +123,15 @@ $announcements = $conn->query($announcements_query)->fetch_all(MYSQLI_ASSOC);
                 <h3 style="margin-bottom: 1.5rem; border-bottom: 2px solid #e5e7eb; padding-bottom: 0.5rem;">Quick Actions</h3>
                 <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 2rem;">
                     <a href="view_students.php" class="btn">View Students</a>
-                    <a href="#" class="btn btn-secondary" onclick="alert('Feature coming soon: Validate Hours')">Validate Hours</a>
+                    <a href="validate_hours.php" class="btn btn-secondary">Validate Hours</a>
+                    <a href="certificates.php" class="btn btn-secondary">Certificates</a>
+                    <a href="manage_announcements.php" class="btn btn-secondary">Announcements</a>
+                    <a href="profile.php" class="btn btn-secondary">My Profile</a>
                 </div>
         <?php endif; ?>
 
-        <!-- Admin/Coordinator dashboard -->
-        <?php if ($user['user_type'] == 'admin' || $user['user_type'] == 'coordinator'): ?>
+        <!-- Admin Dashboard -->
+        <?php if ($user['user_type'] == 'admin'): ?>
                 <h3 style="margin-bottom: 1.5rem; border-bottom: 2px solid #e5e7eb; padding-bottom: 0.5rem;">Admin Panel</h3>
                 <div class="grid-container">
                     <div class="card stat-card">
@@ -130,7 +146,7 @@ $announcements = $conn->query($announcements_query)->fetch_all(MYSQLI_ASSOC);
                     </div>
 
                     <div class="card stat-card">
-                        <h3>Total Companies</h3>
+                        <h3>Total Coordinators</h3>
                         <div class="stat-value">
                             <?php
                             // Count companies from coordinators (coordinator users)
@@ -156,33 +172,15 @@ $announcements = $conn->query($announcements_query)->fetch_all(MYSQLI_ASSOC);
                     <a href="view_students.php" class="btn">View Students</a>
                     <?php if ($user['user_type'] == 'admin'): ?>
                             <a href="manage_users.php" class="btn btn-secondary">Manage Users</a>
+                            <a href="certificates.php" class="btn btn-secondary">Certificates</a>
                             <a href="manage_companies.php" class="btn btn-secondary">Manage Companies</a>
-                            <a href="manage_announcements.php" class="btn btn-secondary">Announcements</a>
+                    <?php endif; ?>
+                    <?php if ($user['user_type'] == 'coordinator'): ?>
+                         <a href="manage_announcements.php" class="btn btn-secondary">Announcements</a>
                     <?php endif; ?>
                 </div>
         <?php endif; ?>
 
-        <!-- Announcements -->
-        <?php if (!empty($announcements)): ?>
-                <h3 style="margin-bottom: 1.5rem; border-bottom: 2px solid #e5e7eb; padding-bottom: 0.5rem;">Recent
-                    Announcements</h3>
-                <div>
-                    <?php foreach ($announcements as $announcement): ?>
-                            <div class="announcement-item slide-up">
-                                <div class="announcement-title"><?php echo htmlspecialchars($announcement['title']); ?></div>
-                                <div style="color: var(--text-secondary); margin: 0.5rem 0;">
-                                    <?php echo htmlspecialchars(substr($announcement['content'], 0, 150)) . '...'; ?></div>
-                                <div style="font-size: 0.75rem; color: var(--text-light);">Posted:
-                                    <?php echo date('M d, Y H:i', strtotime($announcement['posted_at'])); ?></div>
-                            </div>
-                    <?php endforeach; ?>
-                </div>
-        <?php else: ?>
-                <div class="card" style="text-align: center; color: var(--text-light);">
-                    <p>No announcements at this time.</p>
-                </div>
-        <?php endif; ?>
     </div>
 </body>
-
 </html>

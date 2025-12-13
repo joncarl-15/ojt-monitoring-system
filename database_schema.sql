@@ -10,7 +10,8 @@ CREATE TABLE users (
     user_type ENUM('student', 'admin', 'coordinator') NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    is_active BOOLEAN DEFAULT TRUE
+    is_active BOOLEAN DEFAULT TRUE,
+    profile_picture VARCHAR(255) DEFAULT NULL
 );
 
 -- Create Companies Table (Company Information) - MUST BE BEFORE STUDENTS
@@ -102,9 +103,11 @@ CREATE TABLE announcements (
     posted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     scheduled_date DATE,
     is_active BOOLEAN DEFAULT TRUE,
+    company_id INT DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (admin_id) REFERENCES users(user_id) ON DELETE CASCADE
+    FOREIGN KEY (admin_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (company_id) REFERENCES companies(company_id) ON DELETE CASCADE
 );
 
 -- Create Hours Summary Table (for quick access to total hours)
@@ -128,3 +131,4 @@ CREATE INDEX idx_announcements_posted_at ON announcements(posted_at);
 CREATE INDEX idx_users_username ON users(username);
 CREATE INDEX idx_users_user_type ON users(user_type);
 CREATE INDEX idx_coordinators_user_id ON coordinators(user_id);
+CREATE INDEX idx_announcements_company_id ON announcements(company_id);

@@ -40,7 +40,7 @@ function require_login() {
 // Get user info
 function get_user_info($user_id, $conn) {
     $stmt = $conn->prepare("
-        SELECT user_id, username, email, user_type
+        SELECT user_id, username, email, user_type, profile_picture
         FROM users
         WHERE user_id = ?
     ");
